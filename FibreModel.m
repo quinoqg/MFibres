@@ -1,67 +1,49 @@
+function [ Strain, Force, Stress, cumulativeBF] = FibreBwbModel(FibreE, nFibres, k , gam, FibreDiam, DistType)
+% This function runs a virtual experiment in whic a fibre bundle with
+% nFibres parallel fibres are pulled in a strain controlled manner. The
+% arguments are:
+%     FibreE:    Elastic Modulus of the fibre
+%     nFibre:    Number of fibres in the bundle
+%     k and gam: Shape and scale Weibull factors respectively
+%     FibreDiam: Fibre diameter
+%     DistType:  either 'wbl' for Weibull distribution or 'norm' for normal
+%     distribution
+% The outputs are:
+% A Matrix where the columns contain the Strain, Force, Stress, and
+% cumulative number of broken fibres for each stran step.
+% 
+% by: Gustavo Quino: me@gquino.com
 
-%%
-clc
-    MatFiles = dir('*.mat');
-    nfiles   = length(MatFiles);
-   
-    for iter = 1:nfiles
-        mat     (iter) = load (MatFiles(iter).name);
-        titles{1,iter} = MatFiles(iter).name(1:(end-4));
+
+    FibreArea = pi/4*(FibreDiam)^2;
+    if strcmp(DistType , 'norm')
+        Fibre.Strength  = random (DistType,TS_mean,TS_stdv,1, nFibres);
+    elseif strcmp(DistType , 'wbl')
+        % gam = TS_mean/gamma(1+1/k);
+        Fibre.Strength  = random ('wbl', gam ,k ,1 ,nFibres);
     end
 
 
-%% %% Parameters
-close all
-clc
-i=1; %trying AM (i=1)
-DataRanks = [1 1 3 3 1]; % this is the rank of the specimen of the test group to be used
+% Applying the strain 
 
-EpsM = [0.027 0.026 0.026 0.026 0.019 0.02];
-
-E    = mat(i).E{1,DataRanks(i)}*1E6; %Pa%
-%E    = 60E9;
-SsM  = mat(i).Strength{1,DataRanks(i)}*1E6; %Pa
-k    = -(log(SsM/(E*EpsM(i))))^-1;
-TS_scale = k^(1/k) * EpsM(i) * E;
-op = 1;
-nFibres = 2600;
-res(i).k = k;
-res(i).s0 = TS_scale;
-
-%%
-
-[ res(i).Strain res(i).Force res(i).Stress res(i).cumulativeBF] = FibreBwbModel(E*ones(1,nFibres), nFibres, k , TS_scale, 14.6E-6, 'wbl');
-
-%%
- [StrStr ax] = plotGQQ('Strain Stress',res(i).Strain, res(i).Stress*1E-6, 'Strain', 'Stress [MPa]');
-    set(StrStr ,'Position',[800 100 650 400]);
-    set(StrStr , 'PaperPositionMode', 'auto'); %to print file as seen in the screen
-hold on
-li = line(mat(i).strain{1,DataRanks(i)},mat(i).stress{1,DataRanks(i)},'linestyle','--','color',colorGQQ(1),'linewidth',1)
+    Strain_0 = 0; %Initial strain
     
-    
-%%
-
-for i = 2:6
-    E    = mat(i).E{1,DataRanks(i)}*1E6; %Pa
-    SsM  = mat(i).Strength{1,DataRanks(i)}*1E6; %Pa
-    k    = -(log(SsM/(E*EpsM(i))))^-1;
-    TS_scale = k^(1/k) * EpsM(i) * E;
-    res(i).k = k;
-    res(i).s0 = TS_scale;
-    [ res(i).Strain res(i).Force res(i).Stress res(i).cumulativeBF] = FibreBwbModel(E*ones(1,nFibres), nFibres, k , TS_scale, 14.6E-6, 'wbl');
-    lexp(i-1) = line(mat(i).strain{1,DataRanks(i)},mat(i).stress{1,DataRanks(i)},'linestyle','--','color',colorGQQ(i),'linewidth',2);
-    lsim(i-1) = line(res(i).Strain, 1E-6 *  res(i).Stress,'color',colorGQQ(i),'linewidth',2);
+    Strain   = Strain_0:0.00001:0.08;
+    nSteps   = length(Strain);
+    Force    = zeros(1,nSteps);
+    nBFibres = zeros(1,nSteps);
+    Stress   = zeros(1,nSteps);
+    for step = 1:nSteps
+        Force  (step) = sum(FibreE * FibreArea * Strain(step));
+        Stress (step) = Force (step) / (FibreArea * nFibres);
+        % Checking failure criterion in every single fibre
+        for fibre = 1:nFibres
+            if Fibre.Strength(fibre) < FibreE(fibre) * Strain(step) 
+                FibreE(fibre) = 0;
+                Fibre.Strength(fibre) = 0;
+                nBFibres(step) = nBFibres(step) + 1;
+            end
+        end
+    end
+    cumulativeBF = cumsum(nBFibres);
 end
-
-%%
-list1 = strcat({'AM','Dry','SW-RD','SW-Wet','W-RD','W-Wet'},'-Sim')
-list2 = strcat({'AM','Dry','SW-RD','SW-Wet','W-RD','W-Wet'},'-Exp')
-for i = 1:6
-    list3(2*i-1)=list1(i);
-    list3(2*i)  =list2(i);
-end
-%%
-legend(list3)
-ax.XLim = [0,0.08];
- print(StrStr,'Fit - model','-r300', '-dpng');
