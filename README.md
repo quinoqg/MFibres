@@ -5,7 +5,7 @@ Analysis of the mechanical performance of fibres
  This function runs a virtual experiment in whic a fibre bundle with
  nFibres parallel fibres are pulled in a strain controlled manner. The
  arguments are:
-     *FibreE:    Elastic Modulus of the fibre
+Markup:     *FibreE:    Elastic Modulus of the fibre
      *nFibre:    Number of fibres in the bundle
      *k and gam: Shape and scale Weibull factors respectively
      *FibreDiam: Fibre diameter
