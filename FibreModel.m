@@ -8,9 +8,9 @@ function [ Strain, Force, Stress, cumulativeBF] = FibreBwbModel(FibreE, nFibres,
 %     FibreDiam: Fibre diameter
 %     DistType:  either 'wbl' for Weibull distribution or 'norm' for normal
 %     distribution
-% The outputs are:
-% A Matrix where the columns contain the Strain, Force, Stress, and
-% cumulative number of broken fibres for each stran step.
+% The outputs:
+%   A Matrix where the columns contain the Strain, Force, Stress, and
+%   cumulative number of broken fibres for each stran step.
 % 
 % by: Gustavo Quino: me@gquino.com
 
